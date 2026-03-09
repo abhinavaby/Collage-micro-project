@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Console - NFC Smart Cart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
+</head>
+<body class="bg-gradient-to-b from-slate-100 via-gray-50 to-slate-100 min-h-screen pb-10">
+
+    <!-- Header -->
+    <header class="bg-white border-b sticky top-0 z-20 p-4 shadow-sm">
+        <div class="max-w-md mx-auto flex justify-between items-center gap-3">
+            <div>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">Scan&Go</p>
+                <h1 class="text-lg font-black text-blue-600 tracking-tight">Owner Console</h1>
+            </div>
+            <a href="index.html" class="text-[11px] font-semibold px-3 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100">
+                Back to Shopper
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-5">
+        <section class="space-y-3 mt-2">
+            <div class="flex items-center justify-between px-1">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Login</p>
+                    <p class="text-xs text-gray-400">Password is 1234 for any username.</p>
+                </div>
+            </div>
+
+            <!-- Login card -->
+            <div id="owner-login-card" class="bg-white rounded-3xl p-4 shadow border border-gray-100 space-y-3">
+                <p class="text-xs text-gray-500">Log in as store owner to register items for NFC tags or QR / barcodes.</p>
+                <div class="space-y-2">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-semibold text-gray-600">Username</label>
+                        <input id="owner-username" type="text" class="w-full text-sm px-3 py-2 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter any username" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-semibold text-gray-600">Password</label>
+                        <input id="owner-password" type="password" class="w-full text-sm px-3 py-2 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter 1234" />
+                    </div>
+                </div>
+                <p id="owner-login-error" class="hidden text-[11px] text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-2xl"></p>
+                <button id="owner-login-btn" class="w-full bg-gray-900 hover:bg-black text-white text-sm font-bold py-3 rounded-2xl shadow-md active:scale-[0.99] transition-all">
+                    Login as Owner
+                </button>
+            </div>
+
+            <!-- Owner panel -->
+            <div id="owner-panel" class="hidden bg-white rounded-3xl p-4 shadow border border-gray-100 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Item Registry</p>
+                        <p class="text-xs text-gray-400">Scan a tag / code, then set its name and price.</p>
+                    </div>
+                    <button id="owner-logout-btn" class="text-[11px] text-gray-400 hover:text-red-500">Logout</button>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="owner-nfc-scan-btn" class="text-xs bg-blue-50 text-blue-700 border border-blue-100 py-2 rounded-2xl font-semibold">
+                            Scan NFC Tag
+                        </button>
+                        <button id="owner-camera-scan-btn" class="text-xs bg-gray-900 text-white py-2 rounded-2xl font-semibold">
+                            Scan QR / Barcode
+                        </button>
+                    </div>
+                    <div id="owner-camera-wrapper" class="hidden mt-2">
+                        <p class="text-[11px] text-gray-500 mb-1">Point camera at a product QR / barcode.</p>
+                        <div id="owner-camera-scanner" class="rounded-2xl overflow-hidden border border-gray-200"></div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-semibold text-gray-600">Item ID (from tag or code)</label>
+                        <input id="owner-item-id" type="text" class="w-full text-sm px-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 text-gray-700" readonly />
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-2 space-y-1">
+                            <label class="text-[11px] font-semibold text-gray-600">Item Name</label>
+                            <input id="owner-item-name" type="text" class="w-full text-sm px-3 py-2 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. Organic Milk" />
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[11px] font-semibold text-gray-600">Price (₹)</label>
+                            <input id="owner-item-price" type="number" step="0.01" min="0" class="w-full text-sm px-3 py-2 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <button id="owner-save-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-3 rounded-2xl shadow active:scale-[0.99] transition-all">
+                        Save / Update Item
+                    </button>
+                    <p id="owner-save-msg" class="hidden text-[11px] text-green-600 bg-green-50 border border-green-100 px-3 py-2 rounded-2xl"></p>
+                </div>
+
+                <div class="pt-1 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Saved Items</p>
+                        <button id="owner-clear-items-btn" class="text-[11px] text-gray-400 hover:text-red-500">Clear list</button>
+                    </div>
+                    <div id="owner-items-list" class="space-y-1 max-h-40 overflow-y-auto text-xs text-gray-700">
+                        <p class="text-[11px] text-gray-400">No items saved yet.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full text-xs font-medium shadow-2xl opacity-0 translate-y-4 transition-all duration-300 z-50 pointer-events-none">
+        Message
+    </div>
+
+    <script>
+        let ndef = null;
+        let ownerLoggedIn = false;
+        let ownerCameraScanner = null;
+        let ownerCameraActive = false;
+        let itemCatalog = {};
+
+        const toast = document.getElementById('toast');
+        const ownerLoginCard = document.getElementById('owner-login-card');
+        const ownerPanel = document.getElementById('owner-panel');
+        const ownerUsername = document.getElementById('owner-username');
+        const ownerPassword = document.getElementById('owner-password');
+        const ownerLoginBtn = document.getElementById('owner-login-btn');
+        const ownerLoginError = document.getElementById('owner-login-error');
+        const ownerLogoutBtn = document.getElementById('owner-logout-btn');
+        const ownerNfcScanBtn = document.getElementById('owner-nfc-scan-btn');
+        const ownerCameraScanBtn = document.getElementById('owner-camera-scan-btn');
+        const ownerCameraWrapper = document.getElementById('owner-camera-wrapper');
+        const ownerItemIdInput = document.getElementById('owner-item-id');
+        const ownerItemNameInput = document.getElementById('owner-item-name');
+        const ownerItemPriceInput = document.getElementById('owner-item-price');
+        const ownerSaveBtn = document.getElementById('owner-save-btn');
+        const ownerSaveMsg = document.getElementById('owner-save-msg');
+        const ownerItemsList = document.getElementById('owner-items-list');
+        const ownerClearItemsBtn = document.getElementById('owner-clear-items-btn');
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.remove('opacity-0', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.replace('opacity-100', 'opacity-0');
+                toast.classList.replace('translate-y-0', 'translate-y-4');
+            }, 2000);
+        }
+
+        function parseProductFromText(text, fallbackId, defaultName = "Item") {
+            let item = { name: defaultName, price: 5.00, id: fallbackId };
+            try {
+                const data = JSON.parse(text);
+                item.name = data.name || item.name;
+                item.price = data.price || item.price;
+                item.id = data.id || fallbackId;
+            } catch (e) {
+                const parts = text.split(',');
+                if (parts.length >= 2) {
+                    item.name = parts[0].trim();
+                    item.price = parseFloat(parts[1]) || 5.00;
+                    item.id = parts[2] ? parts[2].trim() : fallbackId;
+                } else {
+                    item.name = text;
+                }
+            }
+            return item;
+        }
+
+        function loadCatalog() {
+            try {
+                const raw = localStorage.getItem('scanGoCatalog');
+                if (raw) {
+                    itemCatalog = JSON.parse(raw) || {};
+                }
+            } catch (e) {
+                itemCatalog = {};
+            }
+            renderOwnerItems();
+        }
+
+        function saveCatalog() {
+            try {
+                localStorage.setItem('scanGoCatalog', JSON.stringify(itemCatalog));
+            } catch (e) {
+                console.warn('Unable to save catalog', e);
+            }
+        }
+
+        function setOwnerLoggedIn(loggedIn) {
+            ownerLoggedIn = loggedIn;
+            if (loggedIn) {
+                ownerLoginCard.classList.add('hidden');
+                ownerPanel.classList.remove('hidden');
+                ownerLoginError.classList.add('hidden');
+                ownerPassword.value = "";
+            } else {
+                ownerLoginCard.classList.remove('hidden');
+                ownerPanel.classList.add('hidden');
+                stopOwnerCamera();
+            }
+        }
+
+        function handleOwnerLogin() {
+            const password = ownerPassword.value.trim();
+            if (password !== "1234") {
+                ownerLoginError.textContent = "Incorrect password. Hint: 1234";
+                ownerLoginError.classList.remove('hidden');
+                return;
+            }
+            setOwnerLoggedIn(true);
+            showToast("Owner login successful");
+        }
+
+        function handleOwnerLogout() {
+            setOwnerLoggedIn(false);
+            showToast("Logged out of owner console");
+        }
+
+        function handleOwnerNfcScan() {
+            if (!('NDEFReader' in window)) {
+                showToast("Web NFC not supported in this browser.");
+                return;
+            }
+            (async () => {
+                try {
+                    ownerNfcScanBtn.disabled = true;
+                    ownerNfcScanBtn.textContent = "Waiting for tag...";
+                    ndef = new NDEFReader();
+                    await ndef.scan();
+                    ndef.onreading = (event) => {
+                        const { message, serialNumber } = event;
+                        let payloadText = null;
+                        for (const record of message.records) {
+                            if (record.recordType === "text") {
+                                const decoder = new TextDecoder(record.encoding);
+                                payloadText = decoder.decode(record.data);
+                                break;
+                            }
+                        }
+                        const id = serialNumber || (payloadText || '').slice(0, 32) || `nfc-${Date.now()}`;
+                        ownerItemIdInput.value = id;
+                        if (payloadText) {
+                            const item = parseProductFromText(payloadText, id, "Item");
+                            ownerItemNameInput.value = item.name || "";
+                            ownerItemPriceInput.value = item.price != null ? item.price.toFixed(2) : "";
+                        }
+                        showToast("Tag scanned");
+                        ownerNfcScanBtn.disabled = false;
+                        ownerNfcScanBtn.textContent = "Scan NFC Tag";
+                    };
+                    ndef.onreadingerror = () => {
+                        showToast("Could not read NFC tag.");
+                        ownerNfcScanBtn.disabled = false;
+                        ownerNfcScanBtn.textContent = "Scan NFC Tag";
+                    };
+                } catch (e) {
+                    ownerNfcScanBtn.disabled = false;
+                    ownerNfcScanBtn.textContent = "Scan NFC Tag";
+                    showToast("Error starting NFC scan");
+                }
+            })();
+        }
+
+        function handleOwnerCameraScanSuccess(text) {
+            const id = text.slice(0, 64);
+            ownerItemIdInput.value = id;
+            const item = parseProductFromText(text, id, "Item");
+            ownerItemNameInput.value = item.name || "";
+            ownerItemPriceInput.value = item.price != null ? item.price.toFixed(2) : "";
+            showToast("Code scanned");
+        }
+
+        function stopOwnerCamera() {
+            if (ownerCameraScanner && ownerCameraActive) {
+                const scanner = ownerCameraScanner;
+                if (scanner.clear) {
+                    scanner.clear().catch(() => {});
+                } else if (scanner.stop) {
+                    scanner.stop().catch(() => {});
+                }
+            }
+            ownerCameraActive = false;
+            ownerCameraWrapper.classList.add('hidden');
+            ownerCameraScanBtn.textContent = "Scan QR / Barcode";
+        }
+
+        function toggleOwnerCameraScanner() {
+            if (!window.Html5QrcodeScanner && !window.Html5Qrcode) {
+                showToast("Camera scanner library failed to load.");
+                return;
+            }
+
+            if (ownerCameraActive) {
+                stopOwnerCamera();
+                return;
+            }
+
+            ownerCameraWrapper.classList.remove('hidden');
+            ownerCameraScanBtn.textContent = "Stop Camera";
+
+            const config = { fps: 10, qrbox: 220 };
+            const onScanSuccess = (decodedText) => {
+                handleOwnerCameraScanSuccess(decodedText);
+            };
+
+            if (window.Html5QrcodeScanner) {
+                ownerCameraScanner = new Html5QrcodeScanner("owner-camera-scanner", config, false);
+                ownerCameraScanner.render(onScanSuccess, () => {});
+            } else {
+                ownerCameraScanner = new Html5Qrcode("owner-camera-scanner");
+                ownerCameraScanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    () => {}
+                );
+            }
+
+            ownerCameraActive = true;
+        }
+
+        function handleOwnerSaveItem() {
+            const id = ownerItemIdInput.value.trim();
+            const name = ownerItemNameInput.value.trim();
+            const priceStr = ownerItemPriceInput.value.trim();
+            const price = parseFloat(priceStr);
+
+            if (!id || !name || !priceStr || isNaN(price)) {
+                ownerSaveMsg.textContent = "Please scan a tag/code and provide a valid name and price.";
+                ownerSaveMsg.classList.remove('hidden');
+                ownerSaveMsg.classList.remove('text-green-600', 'bg-green-50', 'border-green-100');
+                ownerSaveMsg.classList.add('text-red-600', 'bg-red-50', 'border-red-100');
+                return;
+            }
+
+            itemCatalog[id] = { name, price };
+            saveCatalog();
+            renderOwnerItems();
+
+            ownerSaveMsg.textContent = "Item saved. It will be used when customers scan this tag/code.";
+            ownerSaveMsg.classList.remove('hidden');
+            ownerSaveMsg.classList.remove('text-red-600', 'bg-red-50', 'border-red-100');
+            ownerSaveMsg.classList.add('text-green-600', 'bg-green-50', 'border-green-100');
+        }
+
+        function renderOwnerItems() {
+            if (!ownerItemsList) return;
+            ownerItemsList.innerHTML = "";
+            const ids = Object.keys(itemCatalog);
+            if (ids.length === 0) {
+                ownerItemsList.innerHTML = `<p class="text-[11px] text-gray-400">No items saved yet.</p>`;
+                return;
+            }
+            ids.forEach(id => {
+                const meta = itemCatalog[id];
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between text-[11px] py-1 border-b border-dashed border-gray-100 last:border-b-0";
+                row.innerHTML = `
+                    <div class="pr-2">
+                        <p class="font-semibold text-gray-800 truncate" title="${meta.name}">${meta.name}</p>
+                        <p class="text-[10px] text-gray-500 truncate" title="${id}">${id}</p>
+                    </div>
+                    <p class="font-bold text-gray-900">₹${(meta.price || 0).toFixed(2)}</p>
+                `;
+                ownerItemsList.appendChild(row);
+            });
+        }
+
+        // Listeners & init
+        ownerLoginBtn.addEventListener('click', handleOwnerLogin);
+        ownerPassword.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleOwnerLogin();
+        });
+        ownerLogoutBtn.addEventListener('click', handleOwnerLogout);
+        ownerNfcScanBtn.addEventListener('click', handleOwnerNfcScan);
+        ownerCameraScanBtn.addEventListener('click', toggleOwnerCameraScanner);
+        ownerSaveBtn.addEventListener('click', handleOwnerSaveItem);
+        ownerClearItemsBtn.addEventListener('click', () => {
+            itemCatalog = {};
+            saveCatalog();
+            renderOwnerItems();
+        });
+
+        loadCatalog();
+    </script>
+</body>
+</html>
