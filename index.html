@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NFC Smart Cart</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
     <style>
         @keyframes pulse-ring {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
@@ -21,23 +22,35 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        @keyframes cart-item-in {
+            0% { opacity: 0; transform: translateY(8px) scale(0.97); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .cart-item-animate {
+            animation: cart-item-in 0.22s ease-out;
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-32">
+<body class="bg-gradient-to-b from-slate-100 via-gray-50 to-slate-100 min-h-screen pb-32">
 
     <!-- Header -->
     <header class="bg-white border-b sticky top-0 z-20 p-4 shadow-sm">
-        <div class="max-w-md mx-auto flex justify-between items-center">
+        <div class="max-w-md mx-auto flex justify-between items-center gap-3">
             <h1 class="text-xl font-black text-blue-600 tracking-tight">SCAN&GO</h1>
-            <div id="status-badge" class="text-[10px] font-bold uppercase px-2 py-1 rounded bg-gray-200 text-gray-600">
-                Checking NFC...
+            <div class="flex items-center gap-2">
+                <a href="owner.html" class="text-[11px] font-semibold px-2 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100">
+                    Owner Console
+                </a>
+                <div id="status-badge" class="text-[10px] font-bold uppercase px-2 py-1 rounded bg-gray-200 text-gray-600">
+                    Checking NFC...
+                </div>
             </div>
         </div>
     </header>
 
     <main class="max-w-md mx-auto p-4 space-y-6">
         
-        <!-- NFC Controller -->
+        <!-- NFC & Camera Controller -->
         <div class="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 text-center space-y-4">
             <div id="nfc-icon-container" class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto transition-all duration-500">
                 <svg id="nfc-svg" xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -45,15 +58,27 @@
                 </svg>
             </div>
             
-            <div class="space-y-1">
-                <h2 id="main-instruction" class="text-lg font-bold text-gray-800">Ready to Shop?</h2>
-                <p id="sub-instruction" class="text-sm text-gray-500">Click the button below to start the scanner.</p>
+            <div class="space-y-3">
+                <div class="space-y-1">
+                    <h2 id="main-instruction" class="text-lg font-bold text-gray-800">Ready to Shop?</h2>
+                    <p id="sub-instruction" class="text-sm text-gray-500">Use NFC tags or scan a QR / barcode.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="scan-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-heavy py-3 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-3">
+                        <div id="btn-spinner" class="hidden w-5 h-5 border-2 border-white rounded-full spinner"></div>
+                        <span id="btn-label">Start NFC</span>
+                    </button>
+                    <button id="camera-scan-btn" class="w-full bg-gray-900 hover:bg-black text-white font-heavy py-3 rounded-2xl shadow-lg transition-all transform active:scale-95 text-sm">
+                        Camera Scan
+                    </button>
+                </div>
             </div>
 
-            <button id="scan-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-heavy py-4 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-3">
-                <div id="btn-spinner" class="hidden w-5 h-5 border-2 border-white rounded-full spinner"></div>
-                <span id="btn-label">Start Scanning</span>
-            </button>
+            <div id="camera-scanner-wrapper" class="mt-4 hidden">
+                <p class="text-[11px] text-gray-500 mb-2">Point your camera at a QR or barcode that encodes product data.</p>
+                <div id="camera-scanner" class="rounded-2xl overflow-hidden border border-gray-200"></div>
+            </div>
 
             <div id="error-box" class="hidden text-xs text-red-600 bg-red-50 p-3 rounded-xl border border-red-100"></div>
         </div>
@@ -61,7 +86,12 @@
         <!-- Cart Section -->
         <div class="space-y-4">
             <div class="flex justify-between items-center px-1">
-                <h3 class="font-bold text-gray-700 uppercase text-xs tracking-widest">Shopping Cart</h3>
+                <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-gray-700 uppercase text-xs tracking-widest">Shopping Cart</h3>
+                    <span id="cart-count-badge" class="text-[11px] font-semibold px-2 py-1 rounded-full bg-blue-50 text-blue-700">
+                        0 items
+                    </span>
+                </div>
                 <button onclick="clearCart()" class="text-xs text-gray-400 hover:text-red-500 transition-colors">Clear All</button>
             </div>
 
@@ -81,6 +111,8 @@
                 <button onclick="mockScan('Espresso Beans', 12.99, 'coffee-99')" class="bg-white border border-amber-200 text-xs py-2 rounded-lg text-amber-800 shadow-sm">+ Coffee</button>
             </div>
         </div>
+
+        <!-- Owner Admin Area moved to separate page -->
     </main>
 
     <!-- Total Bar -->
@@ -88,11 +120,56 @@
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
                 <p class="text-gray-400 text-[10px] font-bold uppercase">Estimated Total</p>
-                <p id="cart-total" class="text-2xl font-black text-gray-900">$0.00</p>
+                <p id="cart-total" class="text-2xl font-black text-gray-900">₹0.00</p>
+                <p id="cart-summary" class="text-[11px] text-gray-400 mt-1">0 items</p>
             </div>
-            <button class="bg-black text-white px-8 py-3 rounded-2xl font-bold shadow-xl active:bg-gray-800 transition-colors">
+            <button id="checkout-btn" class="bg-black text-white px-8 py-3 rounded-2xl font-bold shadow-xl active:bg-gray-800 transition-colors">
                 Checkout
             </button>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receipt-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 flex items-end sm:items-center justify-center">
+        <div class="bg-transparent w-full max-w-md px-3 sm:px-0">
+            <div class="bg-gradient-to-b from-white to-gray-50 w-full rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 space-y-4 border border-gray-200">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-[11px] font-black tracking-[0.2em] uppercase text-gray-900">Scan&Go Market</p>
+                        <p id="receipt-time" class="text-[11px] text-gray-500 mt-1"></p>
+                    </div>
+                    <button onclick="closeReceipt()" class="text-xs text-gray-400 hover:text-gray-700">Close</button>
+                </div>
+                <div class="flex items-center justify-between text-[11px] uppercase tracking-widest text-gray-400 pt-1">
+                    <span>Purchase Summary</span>
+                    <span id="receipt-ref" class="font-mono text-gray-500"></span>
+                </div>
+                <div class="bg-white rounded-3xl border border-dashed border-gray-200 p-4 max-h-64 overflow-y-auto space-y-2 text-left text-sm text-gray-700">
+                    <div class="flex items-center justify-between text-[11px] font-semibold text-gray-400 pb-1 border-b border-dashed border-gray-200 mb-1">
+                        <span class="flex-1">Item</span>
+                        <span class="w-12 text-right">Qty</span>
+                        <span class="w-16 text-right">Price</span>
+                        <span class="w-16 text-right">Total</span>
+                    </div>
+                    <div id="receipt-body" class="space-y-1">
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <span class="text-xs font-semibold uppercase text-gray-500">Total</span>
+                    <span id="receipt-total" class="text-xl font-black text-gray-900">$0.00</span>
+                </div>
+                <div class="text-[10px] text-gray-400 uppercase tracking-[0.18em] text-center">
+                    Thanks for shopping with us
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2 mt-1">
+                    <button id="download-receipt-btn" class="w-full sm:w-1/2 border border-gray-300 text-gray-800 py-3 rounded-2xl font-bold text-sm">
+                        Download Receipt
+                    </button>
+                    <button onclick="finalizeCheckout()" class="w-full sm:w-1/2 bg-black text-white py-3 rounded-2xl font-bold text-sm">
+                        Confirm & Finish
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -104,6 +181,9 @@
     <script>
         let cart = [];
         let ndef = null;
+        let cameraScanner = null;
+        let cameraScannerActive = false;
+        let itemCatalog = {};
 
         const scanBtn = document.getElementById('scan-btn');
         const btnLabel = document.getElementById('btn-label');
@@ -114,7 +194,37 @@
         const cartItems = document.getElementById('cart-items');
         const emptyCart = document.getElementById('empty-cart');
         const cartTotal = document.getElementById('cart-total');
+        const cartSummary = document.getElementById('cart-summary');
         const toast = document.getElementById('toast');
+        const cameraScanBtn = document.getElementById('camera-scan-btn');
+        const cameraScannerWrapper = document.getElementById('camera-scanner-wrapper');
+        const receiptModal = document.getElementById('receipt-modal');
+        const receiptBody = document.getElementById('receipt-body');
+        const receiptTime = document.getElementById('receipt-time');
+        const receiptTotal = document.getElementById('receipt-total');
+        const receiptRef = document.getElementById('receipt-ref');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        const downloadReceiptBtn = document.getElementById('download-receipt-btn');
+        const cartCountBadge = document.getElementById('cart-count-badge');
+
+        function loadCatalog() {
+            try {
+                const raw = localStorage.getItem('scanGoCatalog');
+                if (raw) {
+                    itemCatalog = JSON.parse(raw) || {};
+                }
+            } catch (e) {
+                itemCatalog = {};
+            }
+        }
+
+        function saveCatalog() {
+            try {
+                localStorage.setItem('scanGoCatalog', JSON.stringify(itemCatalog));
+            } catch (e) {
+                console.warn('Unable to save catalog', e);
+            }
+        }
 
         // Check compatibility
         if (!('NDEFReader' in window)) {
@@ -141,7 +251,7 @@
                 await ndef.scan();
                 
                 // Success: Scanning is now active
-                btnLabel.textContent = "Listening for Tags...";
+                btnLabel.textContent = "Listening for NFC...";
                 btnSpinner.classList.add('hidden');
                 scanBtn.classList.add('bg-blue-800', 'scanning-active');
                 nfcIconCont.classList.add('bg-blue-100', 'scale-110');
@@ -171,37 +281,102 @@
             }
         }
 
+        function parseProductFromText(text, fallbackId, defaultName = "Item") {
+            let item = { name: defaultName, price: 5.00, id: fallbackId };
+            try {
+                const data = JSON.parse(text);
+                item.name = data.name || item.name;
+                item.price = data.price || item.price;
+                item.id = data.id || fallbackId;
+            } catch (e) {
+                const parts = text.split(',');
+                if (parts.length >= 2) {
+                    item.name = parts[0].trim();
+                    item.price = parseFloat(parts[1]) || 5.00;
+                    item.id = parts[2] ? parts[2].trim() : fallbackId;
+                } else {
+                    item.name = text;
+                }
+            }
+            return item;
+        }
+
         function handleNfcRead(message, id) {
-            let item = { name: "NFC Item", price: 5.00, id: id };
+            let payloadText = null;
 
             for (const record of message.records) {
                 if (record.recordType === "text") {
                     const decoder = new TextDecoder(record.encoding);
-                    const text = decoder.decode(record.data);
-                    
-                    try {
-                        // Try parsing JSON if valid
-                        const data = JSON.parse(text);
-                        item.name = data.name || item.name;
-                        item.price = data.price || item.price;
-                        item.id = data.id || id;
-                    } catch (e) {
-                        // Otherwise treat comma separated: Name,Price,ID
-                        const parts = text.split(',');
-                        if (parts.length >= 2) {
-                            item.name = parts[0].trim();
-                            item.price = parseFloat(parts[1]) || 5.00;
-                            item.id = parts[2] ? parts[2].trim() : id;
-                        } else {
-                            item.name = text;
-                        }
-                    }
+                    payloadText = decoder.decode(record.data);
+                    break;
                 }
             }
+
+            if (!payloadText) {
+                addToCart({ name: "NFC Item", price: 5.00, id });
+                return;
+            }
+
+            const item = parseProductFromText(payloadText, id, "NFC Item");
             addToCart(item);
         }
 
+        function handleCameraScan(text) {
+            const timestampId = `scan-${Date.now()}`;
+            const item = parseProductFromText(text, timestampId, "Scanned Item");
+            addToCart(item);
+        }
+
+        function toggleCameraScanner() {
+            if (!window.Html5QrcodeScanner && !window.Html5Qrcode) {
+                showError("Camera scanner library failed to load.");
+                return;
+            }
+
+            if (cameraScannerActive) {
+                if (cameraScanner && cameraScanner.clear) {
+                    cameraScanner.clear().catch(() => {});
+                }
+                cameraScannerActive = false;
+                cameraScannerWrapper.classList.add('hidden');
+                cameraScanBtn.textContent = "Camera Scan";
+                return;
+            }
+
+            cameraScannerWrapper.classList.remove('hidden');
+            cameraScanBtn.textContent = "Stop Camera";
+
+            const config = { fps: 10, qrbox: 220 };
+            const onScanSuccess = (decodedText) => {
+                handleCameraScan(decodedText);
+            };
+
+            if (window.Html5QrcodeScanner) {
+                cameraScanner = new Html5QrcodeScanner("camera-scanner", config, false);
+                cameraScanner.render(onScanSuccess, (errorMessage) => {
+                    console.warn("Scan error", errorMessage);
+                });
+            } else {
+                cameraScanner = new Html5Qrcode("camera-scanner");
+                cameraScanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    () => {}
+                );
+            }
+
+            cameraScannerActive = true;
+        }
+
         function addToCart(product) {
+            // Apply catalog overrides if owner has configured this product
+            if (product.id && itemCatalog[product.id]) {
+                const meta = itemCatalog[product.id];
+                if (meta.name) product.name = meta.name;
+                if (typeof meta.price === 'number') product.price = meta.price;
+            }
+
             const existing = cart.find(i => i.id === product.id);
             if (existing) {
                 existing.quantity += 1;
@@ -228,22 +403,30 @@
                 emptyCart.classList.remove('hidden');
                 cartItems.innerHTML = '';
                 cartItems.appendChild(emptyCart);
-                cartTotal.textContent = "$0.00";
+                cartTotal.textContent = "₹0.00";
+                if (cartSummary) cartSummary.textContent = "0 items";
+                if (cartCountBadge) cartCountBadge.textContent = "0 items";
+                if (checkoutBtn) {
+                    checkoutBtn.disabled = true;
+                    checkoutBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                }
                 return;
             }
 
             emptyCart.classList.add('hidden');
             cartItems.innerHTML = '';
             let total = 0;
+            let totalItems = 0;
 
             cart.forEach(item => {
                 total += item.price * item.quantity;
+                totalItems += item.quantity;
                 const el = document.createElement('div');
-                el.className = "bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm";
+                el.className = "bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm cart-item-animate";
                 el.innerHTML = `
                     <div>
                         <h4 class="font-bold text-gray-800">${item.name}</h4>
-                        <p class="text-xs text-blue-500 font-bold">$${item.price.toFixed(2)}</p>
+                        <p class="text-xs text-blue-500 font-bold">₹${item.price.toFixed(2)}</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="flex items-center bg-gray-50 rounded-xl p-1 border">
@@ -256,12 +439,100 @@
                 cartItems.appendChild(el);
             });
 
-            cartTotal.textContent = `$${total.toFixed(2)}`;
+            const summaryText = totalItems === 1 ? "1 item" : `${totalItems} items`;
+            cartTotal.textContent = `₹${total.toFixed(2)}`;
+            if (cartSummary) cartSummary.textContent = summaryText;
+            if (cartCountBadge) cartCountBadge.textContent = summaryText;
+            if (checkoutBtn) {
+                checkoutBtn.disabled = false;
+                checkoutBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
         }
 
         function clearCart() {
             cart = [];
             renderCart();
+        }
+
+        function openReceipt() {
+            if (cart.length === 0) {
+                showError("Your cart is empty.");
+                return;
+            }
+
+            receiptBody.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                const lineTotal = item.price * item.quantity;
+                total += lineTotal;
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between text-xs py-1";
+                row.innerHTML = `
+                    <span class="flex-1 font-medium text-gray-800 truncate pr-2" title="${item.name}">${item.name}</span>
+                    <span class="w-12 text-right text-gray-600">${item.quantity}</span>
+                    <span class="w-16 text-right text-gray-600">₹${item.price.toFixed(2)}</span>
+                    <span class="w-16 text-right font-semibold text-gray-900">₹${lineTotal.toFixed(2)}</span>
+                `;
+                receiptBody.appendChild(row);
+            });
+
+            const now = new Date();
+            const ref = `#${now.getFullYear().toString().slice(-2)}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+            receiptTime.textContent = now.toLocaleString();
+            receiptRef.textContent = ref;
+            receiptTotal.textContent = `₹${total.toFixed(2)}`;
+            receiptModal.classList.remove('hidden');
+        }
+
+        function generateReceiptText() {
+            const now = new Date();
+            let text = "SCAN&GO Receipt\n";
+            text += `Date: ${now.toLocaleString()}\n\n`;
+            text += "Items:\n";
+
+            let total = 0;
+            cart.forEach(item => {
+                const lineTotal = item.price * item.quantity;
+                total += lineTotal;
+                text += `- ${item.name}  |  Qty: ${item.quantity}  |  Price: ₹${item.price.toFixed(2)}  |  Total: ₹${lineTotal.toFixed(2)}\n`;
+            });
+
+            text += "\n";
+            text += `Grand Total: ₹${total.toFixed(2)}\n`;
+            text += "\nThank you for shopping with SCAN&GO!\n";
+            return text;
+        }
+
+        function downloadReceipt() {
+            if (cart.length === 0) {
+                showError("Your cart is empty.");
+                return;
+            }
+
+            const receiptText = generateReceiptText();
+            const blob = new Blob([receiptText], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            const now = new Date();
+            const fileName = `receipt-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${now.getHours()}${String(now.getMinutes()).padStart(2, "0")}.txt`;
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function closeReceipt() {
+            receiptModal.classList.add('hidden');
+        }
+
+        function finalizeCheckout() {
+            closeReceipt();
+            showToast("Checkout complete. Thank you!");
+            clearCart();
         }
 
         function showError(msg) {
@@ -284,6 +555,11 @@
         }
 
         scanBtn.addEventListener('click', startScanning);
+        cameraScanBtn.addEventListener('click', toggleCameraScanner);
+        checkoutBtn.addEventListener('click', openReceipt);
+        downloadReceiptBtn.addEventListener('click', downloadReceipt);
+
+        loadCatalog();
     </script>
 </body>
 </html>
