@@ -38,12 +38,12 @@
         <div class="max-w-md mx-auto flex justify-between items-center gap-3">
             <h1 class="text-xl font-black text-blue-600 tracking-tight">SCAN&GO</h1>
             <div class="flex items-center gap-2">
-                <a href="owner.html" class="text-[11px] font-semibold px-2 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100">
-                    Owner Console
-                </a>
                 <div id="status-badge" class="text-[10px] font-bold uppercase px-2 py-1 rounded bg-gray-200 text-gray-600">
                     Checking NFC...
                 </div>
+                <a href="owner.html" class="text-[11px] font-semibold px-2 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100">
+                    Owner Console
+                </a>
             </div>
         </div>
     </header>
@@ -487,20 +487,50 @@
 
         function generateReceiptText() {
             const now = new Date();
-            let text = "SCAN&GO Receipt\n";
-            text += `Date: ${now.toLocaleString()}\n\n`;
-            text += "Items:\n";
+
+            const width = 52;
+            const line = "-".repeat(width);
+            const title = "SCAN&GO Receipt";
+            const pad = Math.floor((width - title.length) / 2);
+            const header = " ".repeat(Math.max(pad, 0)) + title;
+
+            let text = "";
+            text += `${line}\n`;
+            text += `${header}\n`;
+            text += `${line}\n`;
+            text += `Date : ${now.toLocaleString()}\n\n`;
+
+            text += "Items\n";
+            text += `${line}\n`;
+            text += `Name                  Qty    Price      Total\n`;
+            text += `${line}\n`;
+
+            const nameWidth = 20;
+            const qtyWidth = 3;
+            const priceWidth = 10;
+            const totalWidth = 10;
 
             let total = 0;
             cart.forEach(item => {
                 const lineTotal = item.price * item.quantity;
                 total += lineTotal;
-                text += `- ${item.name}  |  Qty: ${item.quantity}  |  Price: ₹${item.price.toFixed(2)}  |  Total: ₹${lineTotal.toFixed(2)}\n`;
+
+                const rawName = (item.name || "").toString();
+                const name = rawName.length > nameWidth
+                    ? rawName.slice(0, nameWidth - 1) + "…"
+                    : rawName;
+
+                const qty = item.quantity.toString().padStart(qtyWidth, " ");
+                const price = `₹${item.price.toFixed(2)}`.padStart(priceWidth, " ");
+                const totalStr = `₹${lineTotal.toFixed(2)}`.padStart(totalWidth, " ");
+
+                text += `${name.padEnd(nameWidth, " ")}  ${qty}  ${price}  ${totalStr}\n`;
             });
 
-            text += "\n";
+            text += `${line}\n`;
             text += `Grand Total: ₹${total.toFixed(2)}\n`;
-            text += "\nThank you for shopping with SCAN&GO!\n";
+            text += `${line}\n\n`;
+            text += "Thank you for shopping with SCAN&GO!\n";
             return text;
         }
 
@@ -530,9 +560,18 @@
         }
 
         function finalizeCheckout() {
+            // Calculate total before clearing the cart
+            let total = 0;
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+            });
+
             closeReceipt();
-            showToast("Checkout complete. Thank you!");
             clearCart();
+
+            const amount = total.toFixed(2);
+            // Redirect to payment page with amount as query param
+            window.location.href = `payment.html?amount=${encodeURIComponent(amount)}`;
         }
 
         function showError(msg) {
